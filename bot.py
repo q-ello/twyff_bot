@@ -1,8 +1,18 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 import json
+import logging
 
 BOT_TOKEN = "7102704601:AAGIikQy2RStt_x31IC-ulkt5AXY4gO8lmM"
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,  # Change to DEBUG for more detail
+    filename="bot.log",  # Log to file
+    filemode="a"         # Append to file (use 'w' to overwrite)
+)
+
+logger = logging.getLogger(__name__)
 
 songs_by_duration = {
     100: "I Just Want to Have Something to Do - Ramones",
@@ -329,6 +339,7 @@ def update_user_data(userid, duration):
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
+        logger.info("Handling voice message")
         if update.message is None:
             return
         
@@ -340,12 +351,16 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         sender = update.effective_user.first_name
+
+        logger.info(f"Voice message is from {sender}")
+
         if update.message.forward_origin:
             await update.message.reply_text(f'{sender}, как не стыдно не просто пользоваться голосовыми, но ещё и пересылать их...')
+            logger.info("Voice message was forwarded")
             return
 
         duration = voice.duration
-        print(f"Voice message duration: {duration}")
+        logger.info(f"Voice message duration: {duration}")
 
         file_size = voice.file_size
         
@@ -380,35 +395,38 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             roast = f"Мы получили цел{ending[0]} {duration} секунд{ending[1]} аудио от {sender}.\nЭто примерно {((file_size if file_size else 0)/1024):.1f} Кб абсолютно ненужных нам данных.\n👏👏👏"
         await update.message.reply_text(roast)
+        logger.info("Roast was delivered.")
     except Exception as e:
-        print(repr(e))
+        logger.error(repr(e))
 
 def get_unlocked_songs(userid):
     try:
         userdata = []
-        print(userid)
         with open(filename, 'r') as f:
                 d = json.load(f)
                 if userid in d.keys():
                     userdata = d[userid]
         return userdata
     except Exception as e:
-        print(repr(e))
+        logger.error(repr(e))
         return []
 
 async def see_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
+        logger.info("Showing stats")
         if update.effective_user is None:
             return
         if update.message is None:
             return
         
         sender_id = str(update.effective_user.id)
+        logger.info(f"Showing stats of {update.effective_user.first_name}")
         unlocked_songs = get_unlocked_songs(sender_id)
         answer = ""
         if len(unlocked_songs) == 0:
             answer = "Тобой пока не было ничего разблокировано."
             await update.message.reply_text(answer)
+            logger.info("No songs unlocked.")
         else:
             answer = f"Песен разблокировано: {len(unlocked_songs)}/{len(songs_by_duration)}\n\n"
             for i in range(len(unlocked_songs)):
@@ -419,9 +437,10 @@ async def see_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 answer += new_chunk
             if answer != '':
                 await update.message.reply_text(answer)
+            logger.info("Showed unlocked songs.")
         
     except Exception as e:
-        print(repr(e))
+        logger.error(repr(e))
 
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -429,7 +448,7 @@ def main():
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(CommandHandler("stats", see_stats))
 
-    print("Bot is running...")
+    logger.info("Bot is running...")
     app.run_polling()
 
 if __name__ == '__main__':
