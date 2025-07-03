@@ -310,6 +310,8 @@ songs_by_duration = {
 
 filename = 'userdata.json'
 
+video_whitelist = [305264103]
+
 def update_user_data(userid, duration):
     try:
         userdata = {}
@@ -442,11 +444,79 @@ async def see_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(repr(e))
 
+async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        logger.info("Handling video message")
+        if update.message is None:
+            return
+        
+        video = update.message.video_note
+        if video is None:
+            return
+        
+        if update.effective_user is None:
+            return
+        
+        sender_id = update.effective_user.id
+        if sender_id not in video_whitelist:
+            logger.info("The sender is not in whitelist")
+            return
+        
+        sender = update.effective_user.first_name
+
+        logger.info(f"Video message is from {sender}")
+
+        if update.message.forward_origin:
+            await update.message.reply_text(f'{sender}, как не стыдно не просто пользоваться кружочками, но ещё и пересылать их...')
+            logger.info("Video message was forwarded")
+            return
+
+        duration = video.duration
+        logger.info(f"Video message duration: {duration}")
+
+        file_size = video.file_size
+        
+        sender_id = str(update.effective_user.id)
+
+        format = 1 if duration % 10 == 1 and duration % 100 != 11 else 2 if duration % 10 < 5 and duration % 100 not in range(10, 15) else 5 
+
+        if duration < 10:
+            match format:
+                case 1:
+                    ending = 'a'
+                case 2:
+                    ending = 'ы'
+                case 5:
+                    ending = ''
+            roast = f"Всего лишь {duration} секунд{ending}? Да, {sender}, вместо того чтобы держать палец на записи, мог им уже написать всё."
+        elif duration in songs_by_duration.keys():
+            songs_count = -1
+            if sender_id:
+                songs_count = update_user_data(sender_id, duration)
+            roast = f"Мы получили кружочек от {sender}.\nЗа время этого видео мы бы могли посмотреть клип {songs_by_duration[duration]} \
+({songs_count}/{len(songs_by_duration)}).\n\nВремя задуматься."
+        else:
+            ending = ['ых', '']
+            match format:
+                case 1:
+                    ending = ['ую', 'у']
+                case 1:
+                    ending = ['ые', 'ы']
+                case 1:
+                    ending = ['ых', '']
+
+            roast = f"Мы получили кружочек от {sender} на цел{ending[0]} {duration} секунд{ending[1]}.\nЭто примерно {((file_size if file_size else 0)/1024):.1f} Кб абсолютно ненужных нам данных.\n👏👏👏 {sender}, может ты пойдёшь тиктоки снимать?"
+        await update.message.reply_text(roast)
+        logger.info("Roast was delivered.")
+    except Exception as e:
+        logger.error(repr(e))
+
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(CommandHandler("stats", see_stats))
+    app.add_handler(MessageHandler(filters.VIDEO_NOTE, handle_video))
 
     logger.info("Bot is running...")
     app.run_polling()
