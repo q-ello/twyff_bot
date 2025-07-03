@@ -514,6 +514,11 @@ async def handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # Suppress noisy libraries
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("telegram.bot").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)
+
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(CommandHandler("stats", see_stats))
     app.add_handler(MessageHandler(filters.VIDEO_NOTE, handle_video))
