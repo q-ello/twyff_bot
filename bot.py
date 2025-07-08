@@ -310,7 +310,7 @@ songs_by_duration = {
 
 filename = 'userdata.json'
 
-video_whitelist = [305264103]
+video_whitelist = []
 
 def update_user_data(userid, duration):
     try:
@@ -521,7 +521,7 @@ def main():
 
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(CommandHandler("stats", see_stats))
-    app.add_handler(MessageHandler(filters.VIDEO_NOTE, handle_video))
+    # app.add_handler(MessageHandler(filters.VIDEO_NOTE, handle_video))
 
     logger.info("Bot is running...")
     app.run_polling()
