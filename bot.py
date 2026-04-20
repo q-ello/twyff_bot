@@ -2,8 +2,12 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 import json
 import logging
+import os
+from dotenv import load_dotenv
 
-BOT_TOKEN = "7102704601:AAGIikQy2RStt_x31IC-ulkt5AXY4gO8lmM"
+load_dotenv()
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+print(BOT_TOKEN)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
